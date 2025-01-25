@@ -1,0 +1,1 @@
+Added tests for `motor`'s `AsyncIOMotorClient` and `pymongo`'s `AsyncMongoClient` in `tests/test_fsm/storage/test_mongo.py` to cover setting and getting state and data using both clients.
