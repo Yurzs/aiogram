@@ -1,6 +1,7 @@
 import pytest
 
 from aiogram.fsm.storage.base import BaseStorage, StorageKey
+from aiogram.fsm.storage.mongo import MongoStorage
 
 
 @pytest.mark.parametrize(
@@ -65,3 +66,49 @@ class TestStorages:
             "foo": "bar",
             "baz": "test",
         }
+
+
+@pytest.mark.asyncio
+async def test_motor_asyncio_client(mongo_server):
+    from motor.motor_asyncio import AsyncIOMotorClient
+
+    client = AsyncIOMotorClient(mongo_server)
+    storage = MongoStorage(client=client)
+    storage_key = StorageKey(chat_id=CHAT_ID, user_id=USER_ID)
+
+    await storage.set_state(storage_key, "test")
+    assert await storage.get_state(storage_key) == "test"
+
+    await storage.set_data(storage_key, {"key": "value"})
+    assert await storage.get_data(storage_key) == {"key": "value"}
+
+    await storage.set_state(storage_key, None)
+    assert await storage.get_state(storage_key) is None
+
+    await storage.set_data(storage_key, {})
+    assert await storage.get_data(storage_key) == {}
+
+    await storage.close()
+
+
+@pytest.mark.asyncio
+async def test_pymongo_async_client(mongo_server):
+    from pymongo.asynchronous.mongo_client import AsyncMongoClient
+
+    client = AsyncMongoClient(mongo_server)
+    storage = MongoStorage(client=client)
+    storage_key = StorageKey(chat_id=CHAT_ID, user_id=USER_ID)
+
+    await storage.set_state(storage_key, "test")
+    assert await storage.get_state(storage_key) == "test"
+
+    await storage.set_data(storage_key, {"key": "value"})
+    assert await storage.get_data(storage_key) == {"key": "value"}
+
+    await storage.set_state(storage_key, None)
+    assert await storage.get_state(storage_key) is None
+
+    await storage.set_data(storage_key, {})
+    assert await storage.get_data(storage_key) == {}
+
+    await storage.close()
