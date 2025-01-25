@@ -1,6 +1,5 @@
-from typing import Any, Dict, Optional, cast
-
-from motor.motor_asyncio import AsyncIOMotorClient
+import inspect
+from typing import Any, Dict, Optional, Union, cast, Type, Protocol, runtime_checkable
 
 from aiogram.fsm.state import State
 from aiogram.fsm.storage.base import (
@@ -12,6 +11,84 @@ from aiogram.fsm.storage.base import (
 )
 
 
+@runtime_checkable
+class AsyncMongoCollection(Protocol):
+    async def find_one_and_update(
+        self,
+        filter: Dict[str, Any],
+        update: Dict[str, Any],
+        projection: Dict[str, Any],
+        return_document: bool,
+        upsert: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        pass
+
+    async def update_one(
+        self,
+        filter: Dict[str, Any],
+        update: Dict[str, Any],
+        upsert: Optional[bool] = None,
+    ) -> None:
+        pass
+
+    async def delete_one(self, filter: Dict[str, Any]) -> None:
+        pass
+
+    async def find_one(self, filter: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        pass
+
+
+@runtime_checkable
+class AsyncMongoDatabase(Protocol):
+    def __getitem__(self, item) -> AsyncMongoCollection:
+        pass
+
+
+@runtime_checkable
+class AsyncMongoClient(Protocol):
+    def __init__(self, url: str, **kwargs: Any) -> None:
+        pass
+
+    def __getitem__(self, item) -> AsyncMongoDatabase:
+        pass
+
+    def close(self) -> None:
+        pass
+
+    async def server_info(self) -> Dict[str, Any]:
+        pass
+
+    async def drop_database(self, database: AsyncMongoDatabase) -> None:
+        pass
+
+
+def get_available_client() -> Type[AsyncMongoClient]:
+    """Get available AsyncMongoClient class."""
+
+    try:
+        from motor.motor_asyncio import AsyncIOMotorClient
+    except ImportError:
+        pass
+    else:
+        return AsyncIOMotorClient
+
+    try:
+        from pymongo.asynchronous.mongo_client import AsyncMongoClient
+    except ImportError:
+        pass
+    else:
+        return AsyncMongoClient
+
+    raise RuntimeError(
+        inspect.cleandoc(
+            "No available AsyncMongoClient found."
+            "You should install motor or pymongo extra:"
+            "   For Motor -> `aiogram[motor]`"
+            "   For PyMongo -> `aiogram[pymongo]`"
+        )
+    )
+
+
 class MongoStorage(BaseStorage):
     """
     MongoDB storage required :code:`motor` package installed (:code:`pip install motor`)
@@ -19,13 +96,13 @@ class MongoStorage(BaseStorage):
 
     def __init__(
         self,
-        client: AsyncIOMotorClient,
+        client: AsyncMongoClient,
         key_builder: Optional[KeyBuilder] = None,
         db_name: str = "aiogram_fsm",
         collection_name: str = "states_and_data",
     ) -> None:
         """
-        :param client: Instance of AsyncIOMotorClient
+        :param client: Instance of motors AsyncIOMotorClient or pymongo AsyncMongoClient
         :param key_builder: builder that helps to convert contextual key to string
         :param db_name: name of the MongoDB database for FSM
         :param collection_name: name of the collection for storing FSM states and data
@@ -39,19 +116,28 @@ class MongoStorage(BaseStorage):
 
     @classmethod
     def from_url(
-        cls, url: str, connection_kwargs: Optional[Dict[str, Any]] = None, **kwargs: Any
+        cls,
+        url: str,
+        client_cls: Type[AsyncMongoClient] = None,
+        connection_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
     ) -> "MongoStorage":
         """
         Create an instance of :class:`MongoStorage` with specifying the connection string
 
         :param url: for example :code:`mongodb://user:password@host:port`
+        :param client_cls: :code:`AsyncMongoClient` or :code:`AsyncIOMotorClient`.
+            By default, AsyncIOMotorClient is used
         :param connection_kwargs: see :code:`motor` docs
         :param kwargs: arguments to be passed to :class:`MongoStorage`
         :return: an instance of :class:`MongoStorage`
         """
+
+        client_cls = client_cls if client_cls is not None else get_available_client()
+
         if connection_kwargs is None:
             connection_kwargs = {}
-        client = AsyncIOMotorClient(url, **connection_kwargs)
+        client = client_cls(url, **connection_kwargs)
         return cls(client=client, **kwargs)
 
     async def close(self) -> None:

@@ -62,8 +62,11 @@ fast = [
 redis = [
     "redis[hiredis]>=5.0.1,<5.1.0",
 ]
-mongo = [
+motor = [
     "motor>=3.3.2,<3.7.0",
+]
+pymongo = [
+    "pymongo>=4.9, <5.0",
 ]
 proxy = [
     "aiohttp-socks~=0.8.3",
@@ -121,7 +124,8 @@ features = [
     "dev",
     "fast",
     "redis",
-    "mongo",
+    "motor",
+    "pymongo",
     "proxy",
     "i18n",
     "cli",
@@ -141,7 +145,8 @@ lint = "ruff check aiogram tests examples"
 features = [
     "fast",
     "redis",
-    "mongo",
+    "motor",
+    "pymongo",
     "proxy",
     "i18n",
     "docs",
@@ -156,7 +161,8 @@ features = [
     "dev",
     "fast",
     "redis",
-    "mongo",
+    "motor",
+    "pymongo",
     "proxy",
     "i18n",
     "test",
@@ -174,7 +180,8 @@ update = [
 features = [
     "fast",
     "redis",
-    "mongo",
+    "motor",
+    "pymongo",
     "proxy",
     "i18n",
     "test",
@@ -190,7 +197,11 @@ cov-redis = [
     "pytest --cov-config pyproject.toml --cov=aiogram --html=reports/py{matrix:python}/tests/index.html --redis {env:REDIS_DNS:'redis://localhost:6379'} {args}",
     "coverage html -d reports/py{matrix:python}/coverage",
 ]
-cov-mongo = [
+cov-motor = [
+    "pytest --cov-config pyproject.toml --cov=aiogram --html=reports/py{matrix:python}/tests/index.html --mongo {env:MONGO_DNS:'mongodb://mongo:mongo@localhost:27017'} {args}",
+    "coverage html -d reports/py{matrix:python}/coverage",
+]
+cov-pymongo = [
     "pytest --cov-config pyproject.toml --cov=aiogram --html=reports/py{matrix:python}/tests/index.html --mongo {env:MONGO_DNS:'mongodb://mongo:mongo@localhost:27017'} {args}",
     "coverage html -d reports/py{matrix:python}/coverage",
 ]
